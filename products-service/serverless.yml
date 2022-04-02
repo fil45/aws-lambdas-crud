@@ -1,0 +1,86 @@
+service: products-service
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  stage: dev
+  region: eu-central-1
+  profile: dev
+  environment:
+    PRODUCTS_TABLE: ${self:service}-${opt:stage, self:provider.stage}
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource: "*"
+
+resources:
+  Resources:
+    ProductsDynamoDbTable:
+      Type: 'AWS::DynamoDB::Table'
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: "id"
+            AttributeType: "S"
+          -
+            AttributeName: "title"
+            AttributeType: "S"
+          -
+            AttributeName: "price"
+            AttributeType: "N"  
+        KeySchema:
+          -
+            AttributeName: "id"
+            KeyType: "HASH"
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        StreamSpecification:
+          StreamViewType: "NEW_AND_OLD_IMAGES"
+        TableName: ${self:provider.environment.PRODUCTS_TABLE}
+
+
+functions:
+  addProduct:
+    handler: handler.addProduct
+    description: Add product
+    events:
+      - http: 
+          path: product
+          method: post
+  getAllProducts:
+    handler: handler.getAllProducts
+    description: Get all products
+    events:
+      - http: 
+          path: products
+          method: get 
+  getProduct:
+    handler: handler.getProduct
+    description: Get product by id
+    events:
+      - http:
+          path: product/{id}
+          method: get
+  updateProduct:
+    handler: handler.updateProduct
+    description: Update product by id
+    events:
+      - http:
+          path: product/{id}
+          method: patch
+  deleteProduct:
+    handler: handler.deleteProduct
+    description: Delete product by id
+    events:
+      - http:
+          path: product/{id}
+          method: delete
